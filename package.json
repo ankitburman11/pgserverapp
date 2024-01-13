@@ -1,0 +1,11 @@
+{
+  "name": "pgserverapp",
+  "version": "1.0.0",
+  "description": "Backend express with pg service",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ankit Burman",
+  "license": "ISC"
+}
