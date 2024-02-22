@@ -1,13 +1,4 @@
-const Sales = require('../models/salesModel');
+const factory = require('./handlerFactory');
 
-exports.getAllSales = async (req, res, next) => {
-  const sales = await Sales.getAllSales();
-  console.log(sales);
-  res.status(200).json({
-    status: 'success',
-    results: sales.length,
-    data: {
-      sales,
-    },
-  });
-};
+exports.getAllSales = factory.getAll('sales');
+exports.getSale = factory.getOne('sales');
