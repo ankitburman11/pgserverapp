@@ -6,14 +6,11 @@ const { Pool } = postgresql;
 module.exports = (callback = null) => {
   // NOTE: PostgreSQL creates a superuser by default on localhost using the OS username.
   const pool = new Pool({
-    user:
-      (process.env.NODE_ENV === 'development' &&
-        (os.userInfo() || {}).username) ||
-      '',
-    database: 'postgres',
-    password: '',
-    host: '127.0.0.1',
-    port: 5432,
+    user: process.env.PGUSER || 'jeweluser',
+    database: process.env.PGDATABASE || 'jewelifydb',
+    password: process.env.PGPASSWORD || 'jewelpass',
+    host: process.env.PGHOST || 'localhost',
+    port: process.env.PGPORT || 5432,
   });
 
   const connection = {

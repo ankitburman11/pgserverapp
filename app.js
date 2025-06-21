@@ -10,6 +10,7 @@ const xss = require('xss-clean');
 const salesRouter = require('./routes/salesRoutes');
 const userRouter = require('./routes/userRoutes');
 const productRouter = require('./routes/productRoutes');
+const miscRouter = require('./routes/miscRoutes');
 
 const app = express();
 
@@ -83,6 +84,7 @@ app.use(function (req, res, next) {
 app.use('/api/v1/sales', salesRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/products', productRouter);
+app.use('/api/v1/misc', miscRouter);
 
 // app.all('*', (req, res, next) => {
 //   next(new AppError(`Cannot find ${req.originalUrl} in the server`, 404));

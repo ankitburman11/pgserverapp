@@ -1,10 +1,14 @@
 const catchAsync = require('../utils/catchAsync');
+const utils = require('../utils/utils');
 
 exports.createOne = (table) =>
   catchAsync(async (req, res, next) => {
     console.log('creating ', table);
     const cols = Object.keys(req.body);
-    const val = Object.values(req.body).map((el) => formatQueryString(el));
+    const val = Object.values(req.body).map((el) =>
+      utils.formatQueryString(el),
+    );
+    console.log('values', val);
     const queryText = `INSERT INTO ${table}(${cols.join(',')}) VALUES(${val.join(',')})`;
     console.log(queryText);
     const rows = await process.postgresql.query(queryText);
@@ -17,11 +21,18 @@ exports.createOne = (table) =>
     });
   });
 
-exports.getAll = (table) =>
+exports.getAll = (table, references = null) =>
   catchAsync(async (req, res, next) => {
-    const queryText = `SELECT * FROM ${table}`;
-    const rows = await process.postgresql.query(queryText);
+    const joinClause = references?.length
+      ? utils.composeJoinClause(references)
+      : '';
+    const joinSelectCols = references?.length
+      ? ',' + utils.composeJoinSelectCols(references)
+      : '';
+    const queryText = `SELECT ${table}.* ${joinSelectCols} FROM ${table} ${joinClause}`;
 
+    console.log('getAll query', queryText);
+    let rows = await process.postgresql.query(queryText);
     // SEND RESPONSE
     res.status(200).json({
       status: 'success',
@@ -32,9 +43,17 @@ exports.getAll = (table) =>
     });
   });
 
-exports.getOne = (table) =>
+exports.getOne = (table, references = null) =>
   catchAsync(async (req, res, next) => {
-    const queryText = `SELECT * FROM ${table} WHERE ${composeWhereClause(req.params)}`;
+    const joinClause = references?.length
+      ? utils.composeJoinClause(references)
+      : '';
+    const joinSelectCols = references?.length
+      ? ',' + utils.composeJoinSelectCols(references)
+      : '';
+    const queryText = `SELECT ${table}.* ${joinSelectCols} FROM ${table} ${joinClause} WHERE ${utils.composeWhereClause(table, req.params)}`;
+    console.log('getOne query', queryText);
+
     const rows = await process.postgresql.query(queryText);
 
     // SEND RESPONSE
@@ -53,7 +72,7 @@ exports.upsertMany = (table) =>
     const val = req.body
       .map((el) => {
         const valueStr = Object.values(el)
-          .map((el) => formatQueryString(el))
+          .map((el) => utils.formatQueryString(el))
           .join(',');
         return `(${valueStr})`;
       })
@@ -64,30 +83,38 @@ exports.upsertMany = (table) =>
     const queryText = `INSERT INTO ${table}(${cols.join(',')})
                         VALUES ${val}
                         ON CONFLICT (id) DO UPDATE
-                        SET ${composeConflictSetClause(req.body[0])}
+                        SET ${utils.composeConflictSetClause(req.body[0])}
                         WHERE ${table}.id=EXCLUDED.id
                         RETURNING *`;
 
     console.log('upsert queryText', queryText);
     const rows = await process.postgresql.query(queryText);
 
-    if (!rows) {
-      return next(new AppError('No document found with that ID', 404));
-    }
+    console.log('rows', rows);
 
-    res.status(200).json({
-      status: 'success',
-      data: rows,
-    });
+    if (!rows) {
+      return next(new AppError('No row found with that ID', 404));
+    }
+    req.params = { ...req.params, id: req.body[0].id || rows[0].id };
+    next();
+    // res.status(200).json({
+    //   status: 'success',
+    //   data: rows,
+    // });
   });
 
 exports.deleteMany = (table) =>
   catchAsync(async (req, res, next) => {
-    const queryText = `DELETE FROM ${table} WHERE ${composeWhereClause(req.params)}`;
+    console.log('req.params', req.params);
+    console.log(
+      'utils.composeWhereClause(table, req.params)',
+      utils.composeWhereClause(table, req.params),
+    );
+    const queryText = `DELETE FROM ${table} WHERE ${utils.composeWhereClause(table, req.params)}`;
     const rows = await process.postgresql.query(queryText);
 
     if (!rows) {
-      return next(new AppError('No document found with that ID', 404));
+      return next(new AppError('No row found with that ID', 404));
     }
 
     res.status(204).json({
@@ -95,21 +122,3 @@ exports.deleteMany = (table) =>
       data: null,
     });
   });
-
-const formatQueryString = (str) => {
-  return isNaN(str) ? `'${str}'` : str;
-};
-
-const composeWhereClause = (obj) => {
-  return Object.keys(obj)
-    .reduce((acc, el) => (acc += `${el}=${formatQueryString(obj[el])} and`), '')
-    .slice(0, -3);
-};
-
-const composeConflictSetClause = (obj) => {
-  return Object.keys(obj)
-    .filter((el) => el !== 'id')
-    .reduce((acc, el) => (acc += `${el}=EXCLUDED.${el}, `), '')
-    .trimEnd()
-    .slice(0, -1);
-};
