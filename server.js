@@ -1,5 +1,11 @@
-const postgresql = require('./postgresql');
 const dotenv = require('dotenv');
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config({ path: './config.prod.env' });
+} else {
+  dotenv.config({ path: './config.env' });
+}
+
+const postgresql = require('./postgresql');
 
 postgresql();
 
@@ -8,7 +14,6 @@ process.on('uncaughtException', (err) => {
   console.log(err.name, err.message);
   process.exit(1);
 });
-dotenv.config({ path: './config.env' });
 
 const app = require('./app');
 
