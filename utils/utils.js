@@ -2,7 +2,7 @@ function formatQueryString(str) {
   console.log('str', str);
   return str === '' || str === null
     ? "NULLIF('', '')"
-    : isNaN(str)
+    : isNaN(str) && str !== 'current_timestamp'
       ? `'${str}'`
       : str;
 }
