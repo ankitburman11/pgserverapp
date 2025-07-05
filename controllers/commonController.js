@@ -23,3 +23,12 @@ exports.removeNonColumnProps = catchAsync(async (req, res, next) => {
   }
   next();
 });
+
+exports.returnResponse = catchAsync(async (req, res, next) => {
+  res.status(200).json({
+    status: 'success',
+    data: {
+      records: req.body.upsertedData,
+    },
+  });
+});

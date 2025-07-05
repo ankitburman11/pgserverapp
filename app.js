@@ -10,6 +10,7 @@ const xss = require('xss-clean');
 const salesRouter = require('./routes/salesRoutes');
 const userRouter = require('./routes/userRoutes');
 const productRouter = require('./routes/productRoutes');
+const customerRouter = require('./routes/customerRoutes');
 const miscRouter = require('./routes/miscRoutes');
 
 const app = express();
@@ -83,6 +84,7 @@ app.use(function (req, res, next) {
 // 3) ROUTES
 app.use('/api/v1/sales', salesRouter);
 app.use('/api/v1/users', userRouter);
+app.use('/api/v1/customers', customerRouter);
 app.use('/api/v1/products', productRouter);
 app.use('/api/v1/misc', miscRouter);
 

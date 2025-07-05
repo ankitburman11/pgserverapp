@@ -5,6 +5,8 @@ exports.createOne = (table) =>
   catchAsync(async (req, res, next) => {
     console.log('creating ', table);
     const cols = Object.keys(req.body);
+    console.log('req.body', req.body);
+    console.log('Object vals', Object.values(req.body));
     const val = Object.values(req.body).map((el) =>
       utils.formatQueryString(el),
     );
@@ -16,7 +18,7 @@ exports.createOne = (table) =>
     res.status(201).json({
       status: 'success',
       data: {
-        data: rows,
+        records: rows,
       },
     });
   });
@@ -38,7 +40,7 @@ exports.getAll = (table, references = null) =>
       status: 'success',
       results: rows.length,
       data: {
-        data: rows,
+        records: rows,
       },
     });
   });
@@ -61,7 +63,7 @@ exports.getOne = (table, references = null) =>
       status: 'success',
       results: rows.length,
       data: {
-        data: rows,
+        records: rows,
       },
     });
   });
@@ -96,11 +98,12 @@ exports.upsertMany = (table) =>
       return next(new AppError('No row found with that ID', 404));
     }
     req.params = { ...req.params, id: req.body[0].id || rows[0].id };
+    req.body = { ...req.body, upsertedData: rows };
     next();
-    // res.status(200).json({
-    //   status: 'success',
-    //   data: rows,
-    // });
+    /* res.status(200).json({
+      status: 'success',
+      data: { records: rows },
+    }); */
   });
 
 exports.deleteMany = (table) =>
