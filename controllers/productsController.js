@@ -18,6 +18,6 @@ exports.getProduct = factory.getOne('products', [
     selectCols: [{ col: 'name', alias: 'material' }],
   },
 ]);
-exports.createProduct = factory.createOne('products');
+// exports.createProduct = factory.createOne('products');
 exports.updateProducts = factory.upsertMany('products');
 exports.deleteProduct = factory.deleteMany('products');
