@@ -23,7 +23,7 @@ exports.createOne = (table) =>
     });
   });
 
-exports.getAll = (table, references = null) =>
+exports.getAll = (table, references = null, selectedCols = null) =>
   catchAsync(async (req, res, next) => {
     const joinClause = references?.length
       ? utils.composeJoinClause(references)
@@ -31,7 +31,17 @@ exports.getAll = (table, references = null) =>
     const joinSelectCols = references?.length
       ? ',' + utils.composeJoinSelectCols(references)
       : '';
-    const queryText = `SELECT ${table}.* ${joinSelectCols} FROM ${table} ${joinClause}`;
+    // If selectedCols provided, format date columns using TO_CHAR
+    const baseCols = selectedCols
+      ? selectedCols
+          .map((col) =>
+            col.endsWith('_date')
+              ? `TO_CHAR(${table}."${col}", 'YYYY-MM-DD') AS "${col}"`
+              : `${table}."${col}"`,
+          )
+          .join(', ')
+      : `${table}.*`;
+    const queryText = `SELECT ${baseCols} ${joinSelectCols} FROM ${table} ${joinClause}`;
 
     console.log('getAll query', queryText);
     let rows = await process.postgresql.query(queryText);
@@ -45,7 +55,7 @@ exports.getAll = (table, references = null) =>
     });
   });
 
-exports.getOne = (table, references = null) =>
+exports.getOne = (table, references = null, selectedCols = null) =>
   catchAsync(async (req, res, next) => {
     const joinClause = references?.length
       ? utils.composeJoinClause(references)
@@ -53,7 +63,18 @@ exports.getOne = (table, references = null) =>
     const joinSelectCols = references?.length
       ? ',' + utils.composeJoinSelectCols(references)
       : '';
-    const queryText = `SELECT ${table}.* ${joinSelectCols} FROM ${table} ${joinClause} WHERE ${utils.composeWhereClause(table, req.params)}`;
+
+    // If selectedCols provided, format date columns using TO_CHAR
+    const baseCols = selectedCols
+      ? selectedCols
+          .map((col) =>
+            col.endsWith('_date')
+              ? `TO_CHAR(${table}."${col}", 'YYYY-MM-DD') AS "${col}"`
+              : `${table}."${col}"`,
+          )
+          .join(', ')
+      : `${table}.*`;
+    const queryText = `SELECT ${baseCols} ${joinSelectCols} FROM ${table} ${joinClause} WHERE ${utils.composeWhereClause(table, req.params)}`;
     console.log('getOne query', queryText);
 
     const rows = await process.postgresql.query(queryText);
@@ -73,8 +94,9 @@ exports.upsertMany = (table) =>
     const cols = Object.keys(req.body[0]);
     const val = req.body
       .map((el) => {
-        const valueStr = Object.values(el)
-          .map((el) => utils.formatQueryString(el))
+        console.log('el', el);
+        const valueStr = Object.entries(el)
+          .map(([key, val]) => utils.formatQueryString(key, val))
           .join(',');
         return `(${valueStr})`;
       })
@@ -98,6 +120,7 @@ exports.upsertMany = (table) =>
       return next(new AppError('No row found with that ID', 404));
     }
     req.params = { ...req.params, id: req.body[0].id || rows[0].id };
+    console.log('req.params', req.params);
     req.body = { ...req.body, upsertedData: rows };
     next();
     /* res.status(200).json({

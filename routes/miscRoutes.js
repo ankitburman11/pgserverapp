@@ -4,7 +4,7 @@ const miscController = require('../controllers/miscController');
 const router = express.Router();
 
 router
-  .route('/material-rate')
+  .route('/')
   .get(miscController.getAllMaterial)
   .post(miscController.createMaterial);
 

@@ -1,16 +1,23 @@
-function formatQueryString(str) {
-  console.log('str', str);
-  return str === '' || str === null
-    ? "NULLIF('', '')"
-    : isNaN(str) && str !== 'current_timestamp'
-      ? `'${str}'`
-      : str;
+function formatQueryString(key, val) {
+  const isDate = typeof key === 'string' && key.endsWith('_date');
+  if (val === '' || val === null) {
+    return `NULLIF('', '')${isDate ? '::date' : ''}`;
+  }
+  if (isDate) {
+    return `'${val}'::date`;
+  }
+  if (isNaN(val) && val !== 'current_timestamp') {
+    return `'${val}'`;
+  }
+  return val;
 }
 
 function composeWhereClause(table, obj) {
+  console.log('obj', obj);
   return Object.keys(obj)
     .reduce(
-      (acc, el) => (acc += `${table}.${el}=${formatQueryString(obj[el])} and`),
+      (acc, el) =>
+        (acc += `${table}.${el}=${formatQueryString(el, obj[el])} and`),
       '',
     )
     .slice(0, -3);
@@ -36,7 +43,7 @@ function composeJoinClause(references) {
             `${reference.mainTable}.${el.primary}=${reference.joinTable}.${el.foreign}`,
         )} `,
     )
-    .join('and ');
+    .join(' ');
 
   return joinClause;
 }
@@ -49,10 +56,35 @@ function composeConflictSetClause(obj) {
     .slice(0, -1);
 }
 
+/* Unutilized */
+function isValidDateFormat(str) {
+  const regex = /^\d{4}-\d{2}-\d{2}$/;
+  return regex.test(str);
+}
+
+function formatDateLocal(date) {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/* Unutilized */
+function stripDateFieldsFlat(row) {
+  for (const key in row) {
+    if (key.endsWith('_date') && row[key] instanceof Date) {
+      row[key] = formatDateLocal(row[key]);
+    }
+  }
+  return row;
+}
+
 module.exports = {
   formatQueryString,
   composeWhereClause,
   composeJoinSelectCols,
   composeJoinClause,
   composeConflictSetClause,
+  isValidDateFormat,
+  stripDateFieldsFlat,
 };
