@@ -6,6 +6,6 @@ const router = express.Router();
 router
   .route('/')
   .get(miscController.getAllMaterial)
-  .post(miscController.createMaterial);
+  .patch(miscController.updateMaterial, miscController.getAllMaterial);
 
 module.exports = router;

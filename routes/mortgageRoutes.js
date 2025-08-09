@@ -15,7 +15,18 @@ router
   );
 
 router
+  .route('/installments')
+  .patch(
+    mortgageController.updateMortgageInstallment,
+    mortgageController.getMortgage,
+  );
+
+router
+  .route('/installments/:id')
+  .delete(mortgageController.deleteMortgageInstallment);
+
+router
   .route('/:id')
-  // .get(mortgageController.getProduct)
+  .get(mortgageController.getMortgage)
   .delete(mortgageController.deleteMortgage);
 module.exports = router;

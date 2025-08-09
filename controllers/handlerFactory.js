@@ -89,7 +89,7 @@ exports.getOne = (table, references = null, selectedCols = null) =>
     });
   });
 
-exports.upsertMany = (table) =>
+exports.upsertMany = (table, idField) =>
   catchAsync(async (req, res, next) => {
     const cols = Object.keys(req.body[0]);
     const val = req.body
@@ -119,7 +119,10 @@ exports.upsertMany = (table) =>
     if (!rows) {
       return next(new AppError('No row found with that ID', 404));
     }
-    req.params = { ...req.params, id: req.body[0].id || rows[0].id };
+    req.params = {
+      ...req.params,
+      id: req.body[0]?.[idField] || req.body[0].id || rows[0].id,
+    };
     console.log('req.params', req.params);
     req.body = { ...req.body, upsertedData: rows };
     next();
