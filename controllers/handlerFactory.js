@@ -151,3 +151,62 @@ exports.deleteMany = (table) =>
       data: null,
     });
   });
+
+exports.upsertParentWithChildren = (
+  parentTable,
+  childTable,
+  parentKey = 'id',
+  childForeignKey = null,
+) =>
+  catchAsync(async (req, res, next) => {
+    const { parent, children } = req.body;
+    if (!parent || !Array.isArray(children)) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Request body must have parent and children arrays.',
+      });
+    }
+
+    // 1. Upsert parent
+    const parentCols = Object.keys(parent);
+    const parentVals = parentCols.map((col) =>
+      utils.formatQueryString(col, parent[col]),
+    );
+    const parentQuery = `
+      INSERT INTO ${parentTable}(${parentCols.join(',')})
+      VALUES(${parentVals.join(',')})
+      ON CONFLICT (${parentKey}) DO UPDATE
+      SET ${utils.composeConflictSetClause(parent)}
+      WHERE ${parentTable}.${parentKey}=EXCLUDED.${parentKey}
+      RETURNING *;
+    `;
+    const [savedParent] = await process.postgresql.query(parentQuery);
+
+    // 2. Upsert children
+    if (children.length > 0) {
+      const childCols = Object.keys(children[0]);
+      // Determine the foreign key column name
+      const fk = childForeignKey || `${parentTable.slice(0, -1)}_id`;
+      const itemVals = children
+        .map((item) => {
+          // Ensure foreign key is set
+          const fullItem = { ...item, [fk]: savedParent[parentKey] };
+          return `(${childCols.map((col) => utils.formatQueryString(col, fullItem[col])).join(',')})`;
+        })
+        .join(',');
+
+      const childQuery = `
+        INSERT INTO ${childTable}(${childCols.join(',')})
+        VALUES ${itemVals}
+        ON CONFLICT (id) DO UPDATE
+        SET ${utils.composeConflictSetClause(children[0])}
+        RETURNING *;
+      `;
+      await process.postgresql.query(childQuery);
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: { [parentTable]: savedParent, [childTable]: children },
+    });
+  });
